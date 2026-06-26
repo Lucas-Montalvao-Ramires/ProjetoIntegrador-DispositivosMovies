@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { ActivityIndicator, Alert, View } from "react-native";
 import axios from "axios";
 
-const API_URL = "http://SUA_IP_LOCAL:3000"; // Use o IP da sua máquina, não localhost no mobile
+const API_URL = "http://192.168.56.1:3000"; // Use o IP da sua máquina, não localhost no mobile
 
 const DataContext = createContext(null);
 
