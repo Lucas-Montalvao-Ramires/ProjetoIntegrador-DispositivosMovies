@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { ActivityIndicator, Alert, View } from "react-native";
 import axios from "axios";
 
-const API_URL = "http://192.168.56.1:3000"; // Use o IP da sua máquina, não localhost no mobile
+const API_URL = "http://localhost:3000"; 
 
 const DataContext = createContext(null);
 
@@ -13,6 +13,13 @@ export const STATUS = {
     VAGO: "vago",
 };
 
+export const STATUS_INFO = {
+    critico: { label: "Crítico", bg: "#FFE5E5", border: "#FF4D4D", text: "#B30000" },
+    estavel: { label: "Estável", bg: "#E5FFE5", border: "#4DFF4D", text: "#006600" },
+    observacao: { label: "Observação", bg: "#FFF9E5", border: "#FFD633", text: "#997A00" },
+    vago: { label: "Vago", bg: "#F2F2F2", border: "#D9D9D9", text: "#666666" },
+};
+
 export function DataProvider({ children }) {
     const [leitos, setLeitos] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -21,10 +28,16 @@ export function DataProvider({ children }) {
         setLoading(true);
         try {
             const response = await axios.get(`${API_URL}/leitos`);
-            setLeitos(response.data);
+            const mappedData = response.data.map(item => ({
+                ...item,
+                leito: item.leito || item.bed_number
+            }));
+            setLeitos(mappedData);
         } catch (error) {
-            Alert.alert("Erro de Conexão", "Não foi possível carregar os dados da API.");
-            console.error(error);
+            console.error("Erro na API:", error);
+            if (typeof window !== 'undefined' && window.alert) {
+                window.alert("FALHA NA CONEXÃO: O servidor da API está desligado ou inacessível.");
+            }
         } finally {
             setLoading(false);
         }
@@ -40,19 +53,35 @@ export function DataProvider({ children }) {
             await axios.post(`${API_URL}/leitos`, { numero });
             await fetchLeitos();
         } catch (error) {
-            Alert.alert("Erro", "Falha ao adicionar leito.");
+            window.alert("Erro ao adicionar leito.");
         } finally {
             setLoading(false);
         }
     }, [fetchLeitos]);
 
     const removeLeito = useCallback(async (id) => {
+        // DIAGNÓSTICO: Ver se a função é chamada
+        console.log("Tentando remover leito ID:", id);
+        if (typeof window !== 'undefined') {
+            window.alert("Iniciando remoção do leito ID: " + id);
+        }
+
         setLoading(true);
         try {
-            await axios.delete(`${API_URL}/leitos/${id}`);
+            const response = await axios.delete(`${API_URL}/leitos/${id}`);
+            console.log("Resposta da deleção:", response.data);
+            
+            // Forçar atualização da lista
             await fetchLeitos();
+            
+            if (typeof window !== 'undefined') {
+                window.alert("Leito removido com sucesso do banco!");
+            }
         } catch (error) {
-            Alert.alert("Erro", "Falha ao remover leito.");
+            console.error("Erro ao remover leito:", error);
+            if (typeof window !== 'undefined') {
+                window.alert("ERRO AO REMOVER: " + (error.response?.data || error.message));
+            }
         } finally {
             setLoading(false);
         }
@@ -64,7 +93,7 @@ export function DataProvider({ children }) {
             await axios.post(`${API_URL}/admitir`, { leitoId, ...dados });
             await fetchLeitos();
         } catch (error) {
-            Alert.alert("Erro", "Falha ao admitir paciente.");
+            window.alert("Erro ao admitir paciente.");
         } finally {
             setLoading(false);
         }
@@ -76,7 +105,7 @@ export function DataProvider({ children }) {
             await axios.put(`${API_URL}/vagar/${id}`);
             await fetchLeitos();
         } catch (error) {
-            Alert.alert("Erro", "Falha ao liberar leito.");
+            window.alert("Erro ao liberar leito.");
         } finally {
             setLoading(false);
         }
@@ -97,8 +126,20 @@ export function DataProvider({ children }) {
     return (
         <DataContext.Provider value={value}>
             {loading && (
-                <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(255,255,255,0.5)', zIndex: 999 }}>
-                    <ActivityIndicator size="large" color="#0000ff" />
+                <View style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    right: 0, 
+                    bottom: 0, 
+                    justifyContent: 'center', 
+                    alignItems: 'center', 
+                    backgroundColor: 'rgba(0,0,0,0.4)', 
+                    zIndex: 9999 
+                }}>
+                    <View style={{ backgroundColor: 'white', padding: 30, borderRadius: 15, elevation: 5 }}>
+                        <ActivityIndicator size="large" color="#0000ff" />
+                    </View>
                 </View>
             )}
             {children}
